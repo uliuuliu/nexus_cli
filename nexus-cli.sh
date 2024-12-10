@@ -179,13 +179,11 @@ fi
 show "Service status:" "progress"
 if ! sudo systemctl status $SERVICE_NAME.service; then
     show "Failed to retrieve service status." "error"
+    exit 1
 fi
 
 show "Nexus Prover installation and service setup complete!"
 sleep 3  # Пауза 3 секунды
 
-# Добавление команды для просмотра логов службы
-show "To view logs of the Nexus service, run the following command: journalctl -u nexus.service -f -n 50"
-if ! sudo journalctl -u nexus.service -f -n 50
-   show "Failed to show logs." "error"
-fi
+sudo journalctl -u nexus.service -f -n 50
+
