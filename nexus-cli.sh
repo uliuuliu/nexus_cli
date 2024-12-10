@@ -116,4 +116,73 @@ sleep 3
 
 show "Cloning Nexus-XYZ network API repository..." "progress"
 if ! git clone https://github.com/nexus-xyz/network-api.git "$HOME/network-api"; then
-   
+    show "Failed to clone the repository." "error"
+    exit 1
+fi
+
+cd $HOME/network-api/clients/cli
+
+show "Installing required dependencies..." "progress"
+if ! sudo apt install pkg-config libssl-dev -y; then
+    show "Failed to install dependencies." "error"
+    exit 1
+fi
+
+if systemctl is-active --quiet nexus.service; then
+    show "nexus.service is currently running. Stopping and disabling it..."
+    sudo systemctl stop nexus.service
+    sudo systemctl disable nexus.service
+else
+    show "nexus.service is not running."
+fi
+
+show "Creating systemd service..." "progress"
+if ! sudo bash -c "cat > $SERVICE_FILE <<EOF
+[Unit]
+Description=Nexus XYZ Prover Service
+After=network.target
+
+[Service]
+User=$USER
+WorkingDirectory=$HOME/network-api/clients/cli
+Environment=NONINTERACTIVE=1
+ExecStart=$HOME/.cargo/bin/cargo run --release --bin prover -- beta.orchestrator.nexus.xyz
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF"; then
+    show "Failed to create the systemd service file." "error"
+    exit 1
+fi
+
+show "Reloading systemd..." "progress"
+if ! sudo systemctl daemon-reload; then
+    show "Failed to reload systemd." "error"
+    exit 1
+fi
+
+# Сначала включаем сервис, затем запускаем его
+show "Enabling the service to start on boot..." "progress"
+if ! sudo systemctl enable $SERVICE_NAME.service; then
+    show "Failed to enable the service." "error"
+    exit 1
+fi
+
+show "Starting the service..." "progress"
+if ! sudo systemctl start $SERVICE_NAME.service; then
+    show "Failed to start the service." "error"
+    exit 1
+fi
+
+show "Service status:" "progress"
+if ! sudo systemctl status $SERVICE_NAME.service; then
+    show "Failed to retrieve service status." "error"
+fi
+
+show "Nexus Prover installation and service setup complete!"
+
+# Добавление команды для просмотра логов службы
+echo "To view logs of the Nexus service, run the following command:"
+echo "journalctl -u nexus.service -f -n 50"
