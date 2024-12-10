@@ -65,7 +65,7 @@ if ! sudo apt install cargo -y; then
 fi
 
 show "Installing Rust..." "progress"
-if ! curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh; then
+if ! curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; then
     show "Failed to install Rust." "error"
     exit 1
 fi
